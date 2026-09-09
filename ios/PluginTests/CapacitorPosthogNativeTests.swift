@@ -1,25 +1,31 @@
 import XCTest
+import Capacitor
 @testable import Plugin
 
-class PostHogTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+/// The plugin is a thin passthrough to the PostHog SDK, so these tests cover the
+/// bridge itself: that every method declared to JavaScript in `PostHogPlugin.m`
+/// is actually implemented and reachable through the Objective-C runtime.
+class CapacitorPosthogNativeTests: XCTestCase {
+
+    private let bridgedSelectors = [
+        "capture:",
+        "screen:",
+        "identify:",
+        "group:",
+        "reset:"
+    ]
+
+    func testPluginExposesEveryBridgedMethod() {
+        let plugin = PostHogPlugin()
+        for name in bridgedSelectors {
+            XCTAssertTrue(
+                plugin.responds(to: Selector(name)),
+                "PostHogPlugin does not implement \(name), but PostHogPlugin.m declares it to JavaScript"
+            )
+        }
     }
 
-    override func tearDown() {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-        super.tearDown()
-    }
-
-    func testEcho() {
-        // This is an example of a functional test case for a plugin.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-
-        //let implementation = RewodCapacitorPosthog()
-        //let value = "Hello, World!"
-        //let result = implementation.echo(value)
-
-        //XCTAssertEqual(value, result)
+    func testPluginIsRegisteredUnderExpectedName() {
+        XCTAssertEqual(PostHogPlugin().pluginName(), "PostHog")
     }
 }

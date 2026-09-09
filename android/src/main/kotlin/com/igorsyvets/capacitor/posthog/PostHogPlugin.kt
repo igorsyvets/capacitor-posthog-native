@@ -1,7 +1,5 @@
 package com.igorsyvets.capacitor.posthog
 
-
-import android.content.Context
 import android.util.Log
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
@@ -13,102 +11,94 @@ import com.posthog.android.PostHogAndroid
 import com.posthog.android.PostHogAndroidConfig
 import org.json.JSONObject
 
-
+/**
+ * Bridges the PostHog Android SDK into Capacitor.
+ *
+ * The SDK is configured on plugin load from `assets/posthog.config.json`,
+ * which must supply an `apiKey` and a `host`.
+ */
 @CapacitorPlugin(name = "PostHog")
 class PostHogPlugin : Plugin() {
 
-
-
-    override fun load() {
-
-        val jsonObject = JSONObject(context.assets.open("posthog.config.json").bufferedReader().use { it.readText() })
-
-        val apiKey = jsonObject.getString("apiKey") ?: null
-        val host = jsonObject.getString("host") ?: null
-
-        if (apiKey != null && host != null) {
-            val config = PostHogAndroidConfig(apiKey,host, captureScreenViews = false)
-            PostHogAndroid.setup(context, config)
-        }
-        else {
-            Log.e("Capacitor/Plugin", "PostHog Analytics: Config file with apiKey or host is missing")
-        }
-
-        super.load()
-
+    private companion object {
+        const val TAG = "Capacitor/Plugin"
+        const val CONFIG_FILE = "posthog.config.json"
     }
 
+    override fun load() {
+        super.load()
+        configureSdk()
+    }
+
+    private fun configureSdk() {
+        val config = try {
+            val raw = context.assets.open(CONFIG_FILE).bufferedReader().use { it.readText() }
+            JSONObject(raw)
+        } catch (e: Exception) {
+            Log.e(TAG, "PostHog Analytics: could not read $CONFIG_FILE", e)
+            return
+        }
+
+        val apiKey = config.optString("apiKey").takeIf { it.isNotBlank() }
+        val host = config.optString("host").takeIf { it.isNotBlank() }
+
+        if (apiKey == null || host == null) {
+            Log.e(TAG, "PostHog Analytics: $CONFIG_FILE is missing apiKey or host")
+            return
+        }
+
+        Log.d(TAG, "PostHog Analytics: configuring plugin...")
+        PostHogAndroid.setup(context, PostHogAndroidConfig(apiKey, host, captureScreenViews = false))
+        Log.d(TAG, "PostHog Analytics: success")
+    }
+
+    /** Flattens a Capacitor [JSObject] argument into the map shape the PostHog SDK expects. */
+    private fun PluginCall.propertyMap(name: String): Map<String, Any> {
+        val source = getObject(name) ?: return emptyMap()
+        return buildMap {
+            source.keys().forEach { key ->
+                source.opt(key)?.let { put(key, it) }
+            }
+        }
+    }
 
     @PluginMethod
     fun capture(call: PluginCall) {
-        val event_name = call.getString("event_name")
-        // Assuming call.getObject("properties") returns a JSObject or null
-        val jsProperties = call.getObject("properties")
-        // Initialize an empty map which will be filled with the properties from jsProperties
-        val properties = jsProperties?.let { jsObject ->
-            val map = mutableMapOf<String, Any>()
-            jsObject.keys().forEach { key ->
-                if(jsObject.opt(key) != null) map[key] = jsObject.opt(key) ?: ""
-            }
-            map.toMap()
-        } ?: emptyMap()
-
-
-
-        if (event_name != null) {
-            PostHog.capture(event = event_name, properties = properties)
+        val eventName = call.getString("event_name")
+        if (eventName == null) {
+            call.reject("event_name was not provided")
+            return
         }
+        Log.i(TAG, "PostHog Analytics: capturing event: $eventName")
+        PostHog.capture(event = eventName, properties = call.propertyMap("properties"))
         call.resolve()
     }
 
     @PluginMethod
     fun screen(call: PluginCall) {
         val screenTitle = call.getString("screenTitle")
-        // Assuming call.getObject("properties") returns a JSObject or null
-        val jsProperties = call.getObject("properties")
-        // Initialize an empty map which will be filled with the properties from jsProperties
-        val properties = jsProperties?.let { jsObject ->
-            val map = mutableMapOf<String, Any>()
-            jsObject.keys().forEach { key ->
-                if(jsObject.opt(key) != null) map[key] = jsObject.opt(key) ?: ""
-            }
-            map.toMap()
-        } ?: emptyMap()
-
-
-        if (screenTitle != null) {
-            PostHog.screen(screenTitle,properties)
+        if (screenTitle == null) {
+            call.reject("screenTitle was not provided")
+            return
         }
+        Log.i(TAG, "PostHog Analytics: capturing screen: $screenTitle")
+        PostHog.screen(screenTitle, call.propertyMap("properties"))
         call.resolve()
     }
 
     @PluginMethod
     fun identify(call: PluginCall) {
-        val new_distinct_id = call.getString("new_distinct_id")
-        // Assuming call.getObject("properties") returns a JSObject or null
-        val jsUserPropertiesToSet = call.getObject("userPropertiesToSet")
-        // Initialize an empty map which will be filled with the properties from jsProperties
-        val userPropertiesToSet = jsUserPropertiesToSet?.let { jsObject ->
-            val map = mutableMapOf<String, Any>()
-            jsObject.keys().forEach { key ->
-                if(jsObject.opt(key) != null) map[key] = jsObject.opt(key) ?: ""
-            }
-            map.toMap()
-        } ?: emptyMap()
-
-        val jsUserPropertiesToSetOnce = call.getObject("userPropertiesToSetOnce")
-        val userPropertiesToSetOnce = jsUserPropertiesToSetOnce?.let { jsObject ->
-            val map = mutableMapOf<String, Any>()
-            jsObject.keys().forEach { key ->
-                if(jsObject.opt(key) != null) map[key] = jsObject.opt(key) ?: ""
-            }
-            map.toMap()
-        } ?: emptyMap()
-
-
-        if (new_distinct_id != null) {
-            PostHog.identify(new_distinct_id, userPropertiesToSet, userPropertiesToSetOnce)
+        val distinctId = call.getString("new_distinct_id")
+        if (distinctId == null) {
+            call.reject("new_distinct_id was not provided")
+            return
         }
+        Log.i(TAG, "PostHog Analytics: identifying: $distinctId")
+        PostHog.identify(
+            distinctId,
+            call.propertyMap("userPropertiesToSet"),
+            call.propertyMap("userPropertiesToSetOnce")
+        )
         call.resolve()
     }
 
@@ -116,25 +106,18 @@ class PostHogPlugin : Plugin() {
     fun group(call: PluginCall) {
         val type = call.getString("type")
         val key = call.getString("key")
-        // Assuming call.getObject("properties") returns a JSObject or null
-        val jsProperties = call.getObject("properties")
-        // Initialize an empty map which will be filled with the properties from jsProperties
-        val properties = jsProperties?.let { jsObject ->
-            val map = mutableMapOf<String, Any>()
-            jsObject.keys().forEach { key ->
-                if(jsObject.opt(key) != null) map[key] = jsObject.opt(key) ?: ""
-            }
-            map.toMap()
-        } ?: emptyMap()
-
-        if (type != null && key != null) {
-            PostHog.group(type, key, properties)
+        if (type == null || key == null) {
+            call.reject("type and key must both be provided")
+            return
         }
+        Log.i(TAG, "PostHog Analytics: identifying group: {$type: $key}")
+        PostHog.group(type, key, call.propertyMap("properties"))
         call.resolve()
     }
 
     @PluginMethod
     fun reset(call: PluginCall) {
+        Log.i(TAG, "PostHog Analytics: reset")
         PostHog.reset()
         call.resolve()
     }
