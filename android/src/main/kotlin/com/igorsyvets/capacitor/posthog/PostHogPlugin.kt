@@ -1,4 +1,4 @@
-package io.rewod.app.plugins.capacitor.posthog
+package com.igorsyvets.capacitor.posthog
 
 
 import android.content.Context

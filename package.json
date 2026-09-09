@@ -1,7 +1,7 @@
 {
-  "name": "rewod-capacitor-posthog",
-  "version": "0.0.2",
-  "description": "Test",
+  "name": "capacitor-posthog-native",
+  "version": "1.0.0",
+  "description": "Capacitor plugin wrapping the native PostHog SDKs for iOS and Android.",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -11,21 +11,25 @@
     "android/build.gradle",
     "dist/",
     "ios/Plugin/",
-    "PostHog.podspec"
+    "CapacitorPosthogNative.podspec"
   ],
   "author": "Igor Syvets",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/igorsyvets/rewod-capacitor-posthog.git"
+    "url": "git+https://github.com/igorsyvets/capacitor-posthog-native.git"
   },
   "bugs": {
-    "url": "https://github.com/igorsyvets/rewod-capacitor-posthog/issues"
+    "url": "https://github.com/igorsyvets/capacitor-posthog-native/issues"
   },
   "keywords": [
     "capacitor",
     "plugin",
-    "native"
+    "native",
+    "posthog",
+    "analytics",
+    "ios",
+    "android"
   ],
   "scripts": {
     "verify": "npm run verify:ios && npm run verify:android && npm run verify:web",
