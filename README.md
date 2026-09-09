@@ -2,7 +2,7 @@
 
 A Capacitor plugin that wraps the **native** PostHog SDKs on iOS and Android, exposing a single JavaScript API for the analytics calls an app actually makes.
 
-> Built in early 2024 for Rewod, my Capacitor app that needed native PostHog analytics on iOS and Android. It covers the five calls that app used — `capture`, `screen`, `identify`, `group`, `reset` — not the full PostHog surface. Targets Capacitor 5. **Archived and unmaintained**; published as a code sample.
+> Built in early 2024 for Rewod, my Capacitor app that needed native PostHog analytics on iOS and Android. It covers the five calls that app used — `capture`, `screen`, `identify`, `group`, `reset` — not the full PostHog surface. Targets Capacitor 5. **Not actively maintained** — published as a code sample, and still used as-is by the app it was built for.
 >
 > If you need a maintained Capacitor PostHog plugin today, use [`@capawesome/capacitor-posthog`](https://github.com/capawesome-team/capacitor-plugins) — it tracks current Capacitor, covers web, and implements far more of the PostHog API.
 
