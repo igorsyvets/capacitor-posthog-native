@@ -3,63 +3,60 @@ import Capacitor
 import PostHog
 
 /**
- * Please read the Capacitor iOS Plugin Development Guide
- * here: https://capacitorjs.com/docs/plugins/ios
+ * Bridges the PostHog iOS SDK into Capacitor.
+ *
+ * The SDK itself must be configured by the host app before any of these
+ * methods are called — see `PostHogSDK.shared.setup(_:)`.
  */
-
 @objc(PostHogPlugin)
 public class PostHogPlugin: CAPPlugin {
-    
-       
+
     @objc func capture(_ call: CAPPluginCall) {
-            
-        if let event_name = call.getString("event_name") {
-            let properties = call.getObject("properties")
-            PostHogSDK.shared.capture(event_name, properties: properties)
-        } else {
-            print("PostHogPlugin.capture Error: event_name was not provided")
+        guard let eventName = call.getString("event_name") else {
+            call.reject("event_name was not provided")
+            return
         }
+        PostHogSDK.shared.capture(eventName, properties: call.getObject("properties"))
+        call.resolve()
     }
 
     @objc func screen(_ call: CAPPluginCall) {
-        if let screenTitle = call.getString("screenTitle") {
-            let properties = call.getObject("properties")
-            PostHogSDK.shared.capture(screenTitle, properties: properties)
-        } 
-        else {
-            print("PostHogPlugin.screen Error: screenTitle was not provided")
+        guard let screenTitle = call.getString("screenTitle") else {
+            call.reject("screenTitle was not provided")
+            return
         }
+        PostHogSDK.shared.screen(screenTitle, properties: call.getObject("properties"))
+        call.resolve()
     }
-    
+
     @objc func identify(_ call: CAPPluginCall) {
-      
-        if let userID = call.getString("new_distinct_id") {
-            let userPropertiesToSet = call.getObject("userPropertiesToSet")            
-            PostHogSDK.shared.identify(userID, userProperties: userPropertiesToSet)
-        }   
-        else {
-            print("PostHogPlugin.identify Error: new_distinct_id was not provided")
+        guard let distinctId = call.getString("new_distinct_id") else {
+            call.reject("new_distinct_id was not provided")
+            return
         }
+        PostHogSDK.shared.identify(
+            distinctId,
+            userProperties: call.getObject("userPropertiesToSet"),
+            userPropertiesSetOnce: call.getObject("userPropertiesToSetOnce")
+        )
+        call.resolve()
     }
-    
+
     @objc func group(_ call: CAPPluginCall) {
-        
-        if let type = call.getString("type") {
-            if let key = call.getString("key") {
-                let properties = call.getObject("properties")                
-                PostHogSDK.shared.group(type: type, key: key, groupProperties: properties) }
-            else {
-                print("PostHogPlugin.group Error: key was not provided")
-            }            
+        guard let type = call.getString("type") else {
+            call.reject("type was not provided")
+            return
         }
-        else {
-            print("PostHogPlugin.group Error: type was not provided")
+        guard let key = call.getString("key") else {
+            call.reject("key was not provided")
+            return
         }
+        PostHogSDK.shared.group(type: type, key: key, groupProperties: call.getObject("properties"))
+        call.resolve()
     }
-        
 
-     @objc func reset(_ call: CAPPluginCall) {        
+    @objc func reset(_ call: CAPPluginCall) {
         PostHogSDK.shared.reset()
+        call.resolve()
     }
-
 }
